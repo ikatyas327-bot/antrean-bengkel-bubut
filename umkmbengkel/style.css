@@ -67,7 +67,7 @@ header .container {
 }
 
 .logo img {
-    height: 40px; 
+    height: 65px; 
 }
 
 nav ul {
@@ -160,7 +160,7 @@ h3 {
 /* 5. HERO SECTION */
 /* ======================== */
 #hero {
-    /* Menggunakan overlay biru cerah (Dominan di Ruangguru) */
+    /* Menggunakan overlay biru cerah */
     background-color: var(--ruangguru-blue-primary); 
     height: 70vh !important; /* Dibuat lebih pendek dari 100vh */
     position: relative;
@@ -188,47 +188,129 @@ h3 {
     font-weight: 300;
 }
 
-/* ======================== */
-/* 6. SERVICES SECTION (Grid) */
-/* ======================== */
-#services {
-    background-color: var(--ruangguru-light-gray);
+/* ======================================= */
+/* STYLING BAGIAN LAYANAN JASA */
+/* ======================================= */
+.service-image {
+  width: 100%;           /* gambar selalu selebar kartu */
+  height: 180px;         /* tinggi tetap agar seragam */
+  object-fit: cover;     /* isi area tanpa distorsi, crop otomatis */
+  border-radius: 10px;   /* sudut agak melengkung */
+  display: block;        /* hilangkan jarak bawah default */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); /* efek bayangan halus */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.service-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
+/* Efek hover untuk gambar */
+.service-card:hover .service-image {
+  transform: scale(1.03);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
-.service-item {
-    background-color: var(--ruangguru-white);
+/* Responsif: gambar sedikit lebih rendah di layar kecil */
+@media (max-width: 480px) {
+  .service-image {
+    height: 140px;
+    border-radius: 8px;
+  }
+}
+
+
+.services-section {
+    padding: 100px 5%; /* Padding untuk memberi ruang di sekitar konten */
+    text-align: center;
+    background-color: #f9f9f9;
+}
+
+.services-section h2 {
+    font-size: 2.5em;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.section-subtitle {
+    color: #666;
+    margin-bottom: 40px;
+    font-size: 1.1em;
+}
+
+/* Pengaturan Grid untuk Kartu */
+.services-grid {
+    display: grid;
+    /* Membuat kolom responsif: minimal 300px per kolom */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+    gap: 30px; /* Jarak antar kartu */
+    margin-top: 20px;
+}
+
+.service-card {
+    background-color: white;
     padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Shadow halus */
-    flex: 1 1 250px; 
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
     text-align: left;
+    transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.service-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 6px 15px rgba(0, 123, 255, 0.1);
+.service-card:hover {
+    transform: translateY(-5px); /* Efek naik saat dihover */
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
 }
 
-.service-item h3 {
-    margin-top: 0;
-    font-size: 1.3em;
-    text-align: left;
+.service-card h3 {
+    color: #007bff; /* Warna biru untuk judul jasa */
+    margin-bottom: 5px;
+    font-size: 1.25em;
+}
+
+.service-card .description {
+    color: #555;
+    font-size: 0.95em;
     margin-bottom: 15px;
-    color: var(--ruangguru-dark-text);
+    min-height: 40px; /* Memastikan tinggi deskripsi seragam */
 }
 
-.service-item p {
-    color: #6c757d; /* Teks abu-abu halus */
-    margin-bottom: 8px;
+.service-card .details {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #ddd;
+}
+
+.service-card .price {
+    font-weight: bold;
+    color: #28a745; /* Warna hijau untuk harga */
+    font-size: 1.1em;
+}
+
+.service-card .stock {
+    color: #ffc107; /* Warna kuning untuk stok */
+    font-size: 0.9em;
+}
+
+.service-card .work-time {
+    font-style: italic;
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+}
+
+.service-button {
+    display: inline-block;
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+    font-weight: bold;
+}
+
+.service-button:hover {
+    background-color: #0056b3;
 }
 
 /* ======================== */
