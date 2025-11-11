@@ -1,3 +1,41 @@
+<?php
+// admin.php - Halaman Admin dengan tampilan data Antrian
+session_start();
+
+// Cek apakah admin sudah login (Pastikan Anda sudah mengimplementasikan login di login.php)
+if (!isset($_SESSION['admin_id'])) {
+    // Sesuaikan path ke login.php jika file ini berada di folder yang berbeda
+    header("Location: login.php");
+    exit;
+}
+
+// Koneksi ke database
+// Catatan: Saya menggunakan 'require '../koneksi.php';' mengikuti pola file Anda yang lain.
+// Jika koneksi.php berada di folder yang sama, ubah menjadi 'require "koneksi.php";'
+require '../koneksi.php'; 
+
+// Query untuk mengambil semua data antrian pelanggan
+// Menggunakan JOIN untuk mendapatkan nama layanan dari tabel 'menu'
+$sql = "SELECT 
+            q.id, q.queue_number, q.nama, q.telepon, q.alamat, q.keluhan, 
+            q.status, q.created_at, m.name AS service_name, q.priority
+        FROM 
+            queue q
+        LEFT JOIN 
+            menu m ON q.id_menu = m.id_menu
+        ORDER BY 
+            q.created_at DESC"; 
+
+$result = $conn->query($sql);
+
+$queue_data = [];
+if ($result) {
+    $queue_data = $result->fetch_all(MYSQLI_ASSOC);
+} else {
+    // Penanganan error database
+    $error_message = "Error saat mengambil data antrian: " . $conn->error;
+}
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -23,847 +61,549 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Inter', sans-serif;
         }
 
         body {
-            background-color: var(--color-bg-light);
+            font-family: 'Inter', sans-serif;
             color: var(--color-text);
-            display: flex;
-            min-height: 100vh;
-            overflow-x: hidden;
+            line-height: 1.6;
+            background-color: var(--color-bg-light);
         }
 
-        /* 1. SIDEBAR (NAVIGASI KIRI) */
+        /* Struktur Layout */
+        .wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
         .sidebar {
             width: var(--sidebar-width);
-            background: var(--color-bg-sidebar);
-            color: #ffffff;
-            padding: 20px 0;
+            background-color: var(--color-bg-sidebar);
+            color: #E5E7EB; /* Text abu muda */
+            padding: 24px 16px;
             display: flex;
             flex-direction: column;
             position: fixed;
             height: 100%;
-            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
-            z-index: 100;
         }
 
         .sidebar-header {
-            padding: 0 20px 20px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            margin-bottom: 15px;
+            padding: 16px 8px;
             text-align: center;
+            margin-bottom: 24px;
         }
 
-        .sidebar-header h2 {
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: var(--color-secondary);
-        }
-        
-        .sidebar-header p {
-            font-size: 0.8rem; 
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .sidebar-menu a {
+        .nav-link {
             display: flex;
             align-items: center;
-            padding: 14px 25px;
-            color: rgba(255, 255, 255, 0.75);
-            text-decoration: none;
-            font-size: 1rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            margin: 5px 15px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
             border-radius: 8px;
-            cursor: pointer; /* Penting untuk interaksi JS */
-        }
-
-        .sidebar-menu a:hover {
-            background-color: rgba(0, 163, 137, 0.1);
-            color: var(--color-secondary);
-        }
-
-        .sidebar-menu a.active {
-            background: var(--color-secondary);
-            color: #fff;
-            font-weight: 700;
-            box-shadow: 0 4px 10px rgba(0, 163, 137, 0.4);
-        }
-        
-        .sidebar-footer {
-            margin-top: auto;
-            padding: 20px 25px;
-        }
-        
-        .sidebar-footer a {
-            color: #EF4444; 
+            color: #D1D5DB;
             text-decoration: none;
-            display: flex;
-            align-items: center;
-            padding: 10px 15px;
-            border: 1px solid #EF4444;
-            border-radius: 6px;
-            font-weight: 600;
-            transition: all 0.2s;
-            justify-content: center;
-        }
-        .sidebar-footer a:hover {
-            background-color: #EF4444;
-            color: #fff;
+            transition: background-color 0.2s, color 0.2s;
         }
 
+        .nav-link:hover, .nav-link.active {
+            background-color: #374151; /* hover/active background */
+            color: white;
+        }
+        
+        .nav-link svg {
+            margin-right: 12px;
+        }
 
-        /* 2. MAIN CONTENT AREA */
+        .logout-link {
+            margin-top: auto;
+            border-top: 1px solid #374151;
+            padding-top: 16px;
+        }
+
+        /* Konten Utama */
         .main-content {
             margin-left: var(--sidebar-width);
             flex-grow: 1;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
         }
 
-        /* 3. HEADER ADMIN (ATAS) */
-        .admin-header {
-            background-color: #ffffff;
-            padding: 15px 30px;
-            box-shadow: 0 1px 10px rgba(0, 0, 0, 0.05);
+        .header {
+            background-color: white;
+            padding: 16px 32px;
+            box-shadow: var(--shadow-light);
             display: flex;
             justify-content: space-between;
             align-items: center;
             position: sticky;
             top: 0;
-            z-index: 50;
+            z-index: 10;
         }
 
-        .admin-header h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--color-primary);
-        }
-        
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
+        .content {
+            padding: 32px;
         }
 
-        .user-info .avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background-color: var(--color-accent);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            font-size: 1.1rem;
-            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.5);
-            cursor: pointer;
-        }
-
-        /* 4. DASHBOARD CONTENT & SECTION STYLES */
-        .dashboard-content {
-            padding: 35px;
-            flex-grow: 1;
-        }
-
-        /* Menyembunyikan semua section konten secara default */
-        .content-section {
-            display: none;
-            animation: fadeIn 0.5s;
-        }
-        /* Menampilkan section yang sedang aktif */
-        .content-section.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Statistik Grid */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
-        }
-
-        .stat-card {
-            background: #ffffff;
-            padding: 25px;
+        /* Card (kotak konten) */
+        .card {
+            background-color: white;
             border-radius: 12px;
+            overflow: hidden;
             box-shadow: var(--shadow-light);
-            display: flex;
-            flex-direction: column;
-            transition: all 0.3s ease;
             border: 1px solid #E5E7EB;
         }
         
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-icon {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-        }
-        
-        .stat-card:nth-child(1) .card-icon { background: linear-gradient(45deg, var(--color-secondary), #00C8A7); color: white; }
-        .stat-card:nth-child(2) .card-icon { background: linear-gradient(45deg, var(--color-accent), #FFB74D); color: white; }
-        .stat-card:nth-child(3) .card-icon { background: linear-gradient(45deg, var(--color-primary), #3B82F6); color: white; }
-        .stat-card:nth-child(4) .card-icon { background: linear-gradient(45deg, #EF4444, #F87171); color: white; }
-
-
-        .stat-card .label {
-            font-size: 0.95rem;
-            color: #6B7280;
-            font-weight: 500;
-        }
-
-        .stat-card .value {
-            font-size: 2.5rem;
-            font-weight: 800;
-            color: var(--color-text);
-            margin: 5px 0 8px 0;
-        }
-
-        .trend-up { color: #059669; font-size: 0.85rem; font-weight: 600;}
-        .trend-attention { color: #D97706; font-size: 0.85rem; font-weight: 600; }
-        .trend-neutral { color: var(--color-primary); font-size: 0.85rem; font-weight: 600; }
-
-        /* Tabel dan Laporan (Umum) */
-        .report-section {
-            background-color: #ffffff;
-            padding: 25px 30px;
-            border-radius: 12px;
-            box-shadow: var(--shadow-light);
-            margin-bottom: 30px;
-            border: 1px solid #E5E7EB;
-        }
-
-        .report-section h3 {
-            font-size: 1.4rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: var(--color-text);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: separate; 
-            border-spacing: 0;
-            font-size: 0.9rem;
-        }
-
-        th, td {
-            text-align: left;
-            padding: 15px 20px;
-            border-bottom: 1px solid #F3F4F6;
-        }
-
-        th {
-            background-color: #F8F9FB; 
-            color: var(--color-primary);
-            font-weight: 700;
-        }
-        
-        tbody tr:hover {
-            background-color: #FAFBFD;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        .status-badge.pending { background-color: #FEF3C7; color: #D97706; }
-        .status-badge.in-progress { background-color: #DBEAFE; color: #2563EB; }
-        .status-badge.completed { background-color: #D1FAE5; color: #059669; }
-        .status-badge.cancelled { background-color: #FEE2E2; color: #EF4444; }
-
-
-        /* Tombol Aksi */
-        .btn {
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-primary {
-            background-color: var(--color-secondary);
-            color: white;
-        }
-        .btn-primary:hover { background-color: #00877c; }
-
-        .btn-secondary {
-            background-color: #E5E7EB;
-            color: var(--color-text);
-            border: 1px solid #D1D5DB;
-        }
-        .btn-secondary:hover { background-color: #D1D5DB; }
-
-        .btn-action {
-            padding: 5px 10px;
-            font-size: 0.85rem;
-            margin-left: 5px;
-        }
-        
-        .header-controls {
+        .card-header {
+            padding: 16px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-        }
-
-        /* IKON SIMULASI */
-        .fa { padding-right: 10px; }
-        .fa-tachometer-alt::before { content: '🏠'; }
-        .fa-cogs::before { content: '🔧'; }
-        .fa-users::before { content: '👨‍👩‍👧‍👦'; }
-        .fa-calendar-check::before { content: '🗓️'; }
-        .fa-wrench::before { content: '⚙️'; }
-        .fa-file-invoice-dollar::before { content: '💲'; }
-        .fa-sign-out-alt::before { content: '➡️'; }
-        
-        /* --- KODE BARU UNTUK CRUD MODAL --- */
-        .modal {
-            display: none; 
-            position: fixed; 
-            z-index: 200; 
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.6); 
-            padding-top: 50px;
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto; 
-            padding: 30px;
-            border-radius: 12px;
-            width: 90%; 
-            max-width: 500px; 
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            animation: zoomIn 0.3s;
-        }
-        
-        .modal-content h3 {
-            color: var(--color-primary);
-            margin-bottom: 20px;
-            font-size: 1.5rem;
             border-bottom: 1px solid #E5E7EB;
-            padding-bottom: 10px;
+            background-color: #F9FAFB;
         }
 
-        .close-btn {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        .close-btn:hover,
-        .close-btn:focus {
-            color: var(--color-accent);
-            text-decoration: none;
-        }
-
-        .form-group-modal {
-            margin-bottom: 15px;
-        }
-
-        .form-group-modal label {
-            display: block;
-            margin-bottom: 5px;
+        .card-title {
+            font-size: 1.25rem; /* text-xl */
             font-weight: 600;
-            font-size: 0.9rem;
             color: var(--color-text);
         }
 
-        .form-group-modal input[type="text"],
-        .form-group-modal input[type="number"],
-        .form-group-modal input[type="email"],
-        .form-group-modal textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #D1D5DB;
-            border-radius: 6px;
-            font-size: 1rem;
-            box-sizing: border-box;
+        .card-body {
+            padding: 24px;
+        }
+
+        /* Tabel Styling */
+        .table-auto {
+            border-collapse: collapse;
+        }
+
+        .table-auto thead th {
+            font-size: 0.75rem; /* text-xs */
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: #6B7280; /* text-gray-500 */
+            text-transform: uppercase;
+            border-bottom: 2px solid #E5E7EB;
+        }
+
+        .table-auto tbody td {
+            font-size: 0.875rem; /* text-sm */
+            border-bottom: 1px solid #F3F4F6;
         }
         
-        @keyframes zoomIn {
-            from { transform: scale(0.9); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
+        .table-auto tbody tr:last-child td {
+            border-bottom: none;
         }
-        /* --- AKHIR KODE BARU UNTUK CRUD MODAL --- */
-    </style>
+
+        /* Utility Classes (simulasi Tailwind) */
+        .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
+        .font-bold { font-weight: 700; }
+        .mb-6 { margin-bottom: 1.5rem; }
+        .mt-10 { margin-top: 2.5rem; }
+        .text-color-primary { color: var(--color-primary); }
+        .p-6 { padding: 1.5rem; }
+        .p-0 { padding: 0; }
+        .w-full { width: 100%; }
+        .text-sm { font-size: 0.875rem; }
+        .text-gray-500 { color: #6B7280; }
+        .bg-gray-50 { background-color: #F9FAFB; }
+        .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+        .px-4 { padding-left: 1rem; padding-right: 1rem; }
+        .font-semibold { font-weight: 600; }
+        .border-b { border-bottom-width: 1px; border-color: #E5E7EB; }
+        .hover\:bg-gray-50:hover { background-color: #F9FAFB; }
+        .text-center { text-align: center; }
+        .btn-primary { 
+            background-color: var(--color-primary); color: white; padding: 8px 16px; border-radius: 6px; font-weight: 600; transition: background-color 0.2s; border: none; cursor: pointer;
+        }
+        .btn-primary:hover { background-color: #0A3A56; }
+        .btn-secondary { 
+            background-color: #E5E7EB; color: var(--color-text); padding: 8px 16px; border-radius: 6px; font-weight: 500; transition: background-color 0.2s; border: none; cursor: pointer;
+            display: inline-flex; align-items: center;
+        }
+        .btn-secondary:hover { background-color: #D1D5DB; }
+        .btn-icon { background: none; border: none; cursor: pointer; padding: 4px; border-radius: 4px; }
+        .hover\:text-color-accent:hover { color: var(--color-accent); }
+        .shadow-light { box-shadow: var(--shadow-light); }
+        
+        /* Modal Styling (untuk simulasi CRUD/Detail Antrian) */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 10000;
+            visibility: hidden; opacity: 0;
+            transition: visibility 0s, opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            visibility: visible; opacity: 1;
+        }
+
+        .modal-content {
+            background: white; border-radius: 12px; width: 90%; max-width: 600px;
+            max-height: 90vh; overflow-y: auto;
+            transform: translateY(-50px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            padding: 16px 24px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+        
+        /* Tambahan CSS untuk badge status Antrian */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9999px; /* rounded-full */
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        .status-menunggu {
+            background-color: #FEF3C7; /* yellow-100 */
+            color: #D97706; /* yellow-700 */
+        }
+        .status-diproses {
+            background-color: #DBEAFE; /* blue-100 */
+            color: #2563EB; /* blue-700 */
+        }
+        .status-selesai {
+            background-color: #D1FAE5; /* green-100 */
+            color: #059669; /* green-700 */
+        }
+        .status-dibatalkan {
+            background-color: #FEE2E2; /* red-100 */
+            color: #EF4444; /* red-500 */
+        }
+        </style>
 </head>
 <body>
-
-    <div class="sidebar">
-        <div class="sidebar-header">
-            <h2>E-SPEED ADMIN</h2>
-            <p>Bengkel Dashboard</p>
-        </div>
-
-        <nav class="sidebar-menu">
-            <a data-target="dashboard" class="menu-item active"><span class="fa fa-tachometer-alt"></span> Dashboard Utama</a>
-            <a data-target="layanan" class="menu-item"><span class="fa fa-cogs"></span> Manajemen Layanan</a>
-            <a data-target="pelanggan" class="menu-item"><span class="fa fa-users"></span> Manajemen Pelanggan</a>
-            <a data-target="antrian" class="menu-item"><span class="fa fa-calendar-check"></span> Pesanan Antrian</a>
-            <a data-target="laporan" class="menu-item"><span class="fa fa-wrench"></span> Laporan Servis</a>
-            <a data-target="keuangan" class="menu-item"><span class="fa fa-file-invoice-dollar"></span> Transaksi & Keuangan</a>
-        </nav>
-        
-        <div class="sidebar-footer">
-            <a href="login.html"><span class="fa fa-sign-out-alt"></span> Logout</a>
-        </div>
-    </div>
-
-    <div class="main-content">
-
-        <header class="admin-header">
-            <h1 id="pageTitle">Dashboard Utama</h1>
-            <div class="user-info">
-                <p>Halo, Admin E-SPEED</p>
-                <div class="avatar">A</div>
+    <div class="wrapper">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 style="font-size:1.5rem; color: var(--color-secondary);">E-SPEED</h1>
+                <p style="font-size:0.875rem; color: #9CA3AF;">Dashboard Admin</p>
             </div>
-        </header>
+            
+            <nav>
+                <a href="#antrian" class="nav-link active">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V17a2 2 0 01-2 2z"></path></svg>
+                    Daftar Antrian
+                </a>
+                <a href="#pelanggan" class="nav-link">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20v-2m0 2a2 2 0 100-4 2 2 0 000 4zM12 18.5A2.5 2.5 0 019.5 16h-1A4.5 4.5 0 0013 20.5v0zm-2-9a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    Data Pelanggan
+                </a>
+                </nav>
 
-        <section class="dashboard-content content-section active" id="dashboard">
-            <h2>Ringkasan Kinerja Bengkel</h2>
-            <div class="stats-grid">
+            <a href="logout.php" class="nav-link logout-link">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                Logout
+            </a>
+        </aside>
+
+        <div class="main-content">
+            <header class="header">
+                <div>Halo, **<?php echo htmlspecialchars($_SESSION['admin_nama'] ?? 'Admin'); ?>**</div>
+                </header>
+
+            <main class="content">
+                <h1 class="text-3xl font-bold mb-6 text-color-primary" id="antrian">Daftar Antrian Pelanggan</h1>
                 
-                <div class="stat-card">
-                    <div class="card-icon">🗓️</div>
-                    <p class="label">Antrian Hari Ini</p>
-                    <p class="value">12</p>
-                    <p class="trend trend-up">+2 Antrian Baru</p>
+                <div class="card shadow-light mb-6">
+                    <header class="card-header">
+                        <h2 class="card-title">Antrian Masuk</h2>
+                        <button onclick="window.location.reload()" class="btn-secondary">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5m-1 5a9 9 0 01-13.9-6.3M20 4a9 9 0 01-13.9 6.3"></path></svg>
+                            Refresh Data
+                        </button>
+                    </header>
+
+                    <div class="card-body p-0">
+                        <div class="overflow-x-auto">
+                            <table class="table-auto w-full text-sm">
+                                <thead>
+                                    <tr class="text-left text-gray-500 bg-gray-50 uppercase tracking-wider">
+                                        <th class="py-3 px-4 font-semibold">No. Antri</th>
+                                        <th class="py-3 px-4 font-semibold">Nama Pelanggan</th>
+                                        <th class="py-3 px-4 font-semibold">Layanan</th>
+                                        <th class="py-3 px-4 font-semibold">Telepon</th>
+                                        <th class="py-3 px-4 font-semibold">Status</th>
+                                        <th class="py-3 px-4 font-semibold">Waktu Masuk</th>
+                                        <th class="py-3 px-4 font-semibold">Prioritas</th>
+                                        <th class="py-3 px-4 font-semibold">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (!empty($queue_data)): ?>
+                                        <?php foreach ($queue_data as $row): ?>
+                                            <tr class="border-b hover:bg-gray-50" data-id="<?= htmlspecialchars($row['id']) ?>">
+                                                <td class="py-3 px-4 font-medium text-color-primary"><?= htmlspecialchars($row['queue_number']) ?></td>
+                                                <td class="py-3 px-4"><?= htmlspecialchars($row['nama']) ?></td>
+                                                <td class="py-3 px-4"><?= htmlspecialchars($row['service_name']) ?></td>
+                                                <td class="py-3 px-4"><?= htmlspecialchars($row['telepon']) ?></td>
+                                                <td class="py-3 px-4">
+                                                    <span class="status-badge status-<?= strtolower(htmlspecialchars($row['status'])) ?>">
+                                                        <?= htmlspecialchars($row['status']) ?>
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 px-4"><?= date('d M Y H:i', strtotime($row['created_at'])) ?></td>
+                                                <td class="py-3 px-4"><?= htmlspecialchars($row['priority']) ?></td>
+                                                <td class="py-3 px-4">
+                                                    <button class="btn-icon text-color-primary hover:text-color-accent view-detail-antrian" 
+                                                            data-id="<?= htmlspecialchars($row['id']) ?>" 
+                                                            data-nama="<?= htmlspecialchars($row['nama']) ?>"
+                                                            data-layanan="<?= htmlspecialchars($row['service_name']) ?>"
+                                                            data-keluhan="<?= htmlspecialchars($row['keluhan']) ?>"
+                                                            data-alamat="<?= htmlspecialchars($row['alamat']) ?>"
+                                                            data-telepon="<?= htmlspecialchars($row['telepon']) ?>">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                                    </button>
+                                                    <button class="btn-icon text-color-secondary hover:text-color-accent process-antrian" 
+                                                            data-id="<?= htmlspecialchars($row['id']) ?>" 
+                                                            data-nama="<?= htmlspecialchars($row['nama']) ?>">
+                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="8" class="py-6 px-4 text-center text-gray-500">
+                                                <?php echo isset($error_message) ? $error_message : 'Belum ada data antrian yang masuk.'; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="stat-card">
-                    <div class="card-icon">🔔</div>
-                    <p class="label">Pesanan Pending</p>
-                    <p class="value">5</p>
-                    <p class="trend trend-attention">Perhatian: Segera Diproses!</p>
+                <h1 class="text-3xl font-bold mb-6 text-color-primary mt-10" id="pelanggan">Data Pelanggan (Simulasi CRUD)</h1>
+
+                <div class="card shadow-light mb-6">
+                    <header class="card-header">
+                        <h2 class="card-title">Daftar Pelanggan</h2>
+                        <button class="btn-primary" onclick="openModal('pelangganModal', 'Tambah Pelanggan Baru')">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            Tambah Pelanggan
+                        </button>
+                    </header>
+
+                    <div class="card-body p-0">
+                        <div class="overflow-x-auto">
+                            <table class="table-auto w-full text-sm">
+                                <thead>
+                                    <tr class="text-left text-gray-500 bg-gray-50 uppercase tracking-wider">
+                                        <th class="py-3 px-4 font-semibold">ID</th>
+                                        <th class="py-3 px-4 font-semibold">Nama</th>
+                                        <th class="py-3 px-4 font-semibold">Email</th>
+                                        <th class="py-3 px-4 font-semibold">Telepon</th>
+                                        <th class="py-3 px-4 font-semibold">Total Transaksi</th>
+                                        <th class="py-3 px-4 font-semibold">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b hover:bg-gray-50" data-id="101" data-nama="Budi Santoso" data-email="budi@example.com" data-telepon="081211112222">
+                                        <td class="py-3 px-4 text-gray-700">101</td>
+                                        <td class="py-3 px-4 font-medium">Budi Santoso</td>
+                                        <td class="py-3 px-4">budi@example.com</td>
+                                        <td class="py-3 px-4">081211112222</td>
+                                        <td class="py-3 px-4 text-right">Rp 450.000</td>
+                                        <td class="py-3 px-4">
+                                            <button class="btn-icon text-color-secondary hover:text-color-accent edit-pelanggan">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                            </button>
+                                            <button class="btn-icon text-red-500 hover:text-red-700 delete-pelanggan" data-id="101" data-nama="Budi Santoso">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <tr class="border-b hover:bg-gray-50" data-id="102" data-nama="Siti Aisyah" data-email="siti@example.com" data-telepon="085733334444">
+                                        <td class="py-3 px-4 text-gray-700">102</td>
+                                        <td class="py-3 px-4 font-medium">Siti Aisyah</td>
+                                        <td class="py-3 px-4">siti@example.com</td>
+                                        <td class="py-3 px-4">085733334444</td>
+                                        <td class="py-3 px-4 text-right">Rp 90.000</td>
+                                        <td class="py-3 px-4">
+                                            <button class="btn-icon text-color-secondary hover:text-color-accent edit-pelanggan">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                            </button>
+                                            <button class="btn-icon text-red-500 hover:text-red-700 delete-pelanggan" data-id="102" data-nama="Siti Aisyah">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-
-                <div class="stat-card">
-                    <div class="card-icon">✅</div>
-                    <p class="label">Servis Selesai (Bulan Ini)</p>
-                    <p class="value">85</p>
-                    <p class="trend trend-neutral">Target: 100 Servis</p>
-                </div>
-
-                <div class="stat-card">
-                    <div class="card-icon">💲</div>
-                    <p class="label">Total Pendapatan (Bulan Ini)</p>
-                    <p class="value">Rp 125 Jt</p>
-                    <p class="trend trend-up">Kenaikan 15% dari Bulan Lalu</p>
-                </div>
-            </div>
-
-            <div class="report-section">
-                <h3>Antrian Servis Terbaru</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID Antrian</th>
-                            <th>Nama Pelanggan</th>
-                            <th>Jenis Perbaikan</th>
-                            <th>Status</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr> <td>#EKB0124</td> <td>Budi Santoso</td> <td>Bubut Poros</td> <td><span class="status-badge in-progress">Dalam Proses</span></td> <td><button class="btn btn-secondary btn-action">Lihat Detail</button></td> </tr>
-                        <tr> <td>#EKB0123</td> <td>Siti Aisyah</td> <td>Bor Roda Gigi</td> <td><span class="status-badge completed">Selesai</span></td> <td><button class="btn btn-secondary btn-action">Cetak Invoice</button></td> </tr>
-                        <tr> <td>#EKB0122</td> <td>Joko Wibowo</td> <td>Tapping Ulir Dalam</td> <td><span class="status-badge pending">Pending</span></td> <td><button class="btn btn-primary btn-action">Konfirmasi</button></td> </tr>
-                    </tbody>
-                </table>
-            </div>
-            
-        </section>
-        
-        <section class="dashboard-content content-section" id="layanan">
-            <div class="header-controls">
-                <h2>Manajemen Layanan</h2>
-                <button class="btn btn-primary" onclick="openModal('layananModal', 'Tambah Layanan Baru')"><span style="font-size: 1.2rem;">➕</span> Tambah Layanan Baru</button>
-            </div>
-            
-            <div class="report-section">
-                <h3>Daftar Layanan Tersedia (C-R-U-D)</h3>
-                <table id="tabelLayanan">
-                    <thead>
-                        <tr>
-                            <th>Kode</th>
-                            <th>Nama Layanan</th>
-                            <th>Harga Dasar (Rp)</th>
-                            <th>Waktu Pengerjaan (Jam)</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr data-id="L001" data-nama="Bubut Poros" data-harga="150000" data-waktu="3"> 
-                            <td>L001</td> 
-                            <td>Bubut Poros</td> 
-                            <td>150.000</td> 
-                            <td>3</td> 
-                            <td>
-                                <button class="btn btn-secondary btn-action edit-layanan" data-id="L001">✍️ Edit</button> 
-                                <button class="btn btn-secondary btn-action delete-layanan" style="background-color: #FEE2E2; color: #EF4444;" data-id="L001" data-nama="Bubut Poros">🗑️ Hapus</button>
-                            </td> 
-                        </tr>
-                        <tr data-id="L002" data-nama="Frais Permukaan" data-harga="200000" data-waktu="4"> 
-                            <td>L002</td> 
-                            <td>Frais Permukaan</td> 
-                            <td>200.000</td> 
-                            <td>4</td> 
-                            <td>
-                                <button class="btn btn-secondary btn-action edit-layanan" data-id="L002">✍️ Edit</button> 
-                                <button class="btn btn-secondary btn-action delete-layanan" style="background-color: #FEE2E2; color: #EF4444;" data-id="L002" data-nama="Frais Permukaan">🗑️ Hapus</button>
-                            </td> 
-                        </tr>
-                        <tr data-id="L003" data-nama="Tapping Ulir" data-harga="80000" data-waktu="2"> 
-                            <td>L003</td> 
-                            <td>Tapping Ulir</td> 
-                            <td>80.000</td> 
-                            <td>2</td> 
-                            <td>
-                                <button class="btn btn-secondary btn-action edit-layanan" data-id="L003">✍️ Edit</button> 
-                                <button class="btn btn-secondary btn-action delete-layanan" style="background-color: #FEE2E2; color: #EF4444;" data-id="L003" data-nama="Tapping Ulir">🗑️ Hapus</button>
-                            </td> 
-                        </tr>
-                    </tbody>
-                </table>
-                <p style="margin-top: 20px; font-size: 0.85rem; color: #6B7280;">*Harga bersifat dasar, dapat disesuaikan berdasarkan kompleksitas material. Data CRUD disimulasikan di halaman ini.</p>
-            </div>
-        </section>
-
-        <section class="dashboard-content content-section" id="antrian">
-            <div class="header-controls">
-                <h2>Pesanan Antrian</h2>
-                <button class="btn btn-primary">Lihat Kalender Booking 📅</button>
-            </div>
-            
-            <div class="report-section">
-                <h3>Semua Daftar Pesanan Masuk</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID Pesanan</th>
-                            <th>Pelanggan</th>
-                            <th>Layanan (Estimasi)</th>
-                            <th>Tgl. Booking</th>
-                            <th>Status</th>
-                            <th>Keluhan Singkat</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr> <td>P005</td> <td>Roni Wijaya</td> <td>Bubut Poros</td> <td>09/11/2025</td> <td><span class="status-badge pending">Pending</span></td> <td>Poros bengkok, perlu diperhalus.</td> <td><button class="btn btn-primary btn-action">Proses</button></td></tr>
-                        <tr> <td>P004</td> <td>Maria Utami</td> <td>Frais Permukaan</td> <td>07/11/2025</td> <td><span class="status-badge in-progress">Dalam Proses</span></td> <td>Mengikis 0.5mm dari permukaan.</td> <td><button class="btn btn-secondary btn-action">Selesaikan</button></td></tr>
-                        <tr> <td>P003</td> <td>Andre Setya</td> <td>Tapping Ulir</td> <td>06/11/2025</td> <td><span class="status-badge completed">Selesai</span></td> <td>Pembuatan ulir baru M10.</td> <td><button class="btn btn-secondary btn-action">Arsipkan</button></td></tr>
-                        <tr> <td>P002</td> <td>Fina Dewi</td> <td>Bubut Poros</td> <td>05/11/2025</td> <td><span class="status-badge cancelled">Dibatalkan</span></td> <td>Gagal menghubungi pelanggan.</td> <td><button class="btn btn-secondary btn-action">Hapus</button></td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="dashboard-content content-section" id="pelanggan">
-            <div class="header-controls">
-                <h2>Manajemen Pelanggan</h2>
-                <button class="btn btn-primary" onclick="openModal('pelangganModal', 'Tambah Data Pelanggan Baru')"><span style="font-size: 1.2rem;">➕</span> Tambah Pelanggan</button>
-            </div>
-            
-            <div class="report-section">
-                <h3>Daftar Pelanggan Terdaftar (C-R-U-D)</h3>
-                <table id="tabelPelanggan">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nama Lengkap</th>
-                            <th>Email/Telepon</th>
-                            <th>Total Transaksi</th>
-                            <th>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr data-id="C001" data-nama="Budi Santoso" data-email="budi.s@mail.com" data-telepon="0811223344"> 
-                            <td>C001</td> 
-                            <td>Budi Santoso</td> 
-                            <td>budi.s@mail.com</td>
-                            <td>Rp 1.250.000</td> 
-                            <td>
-                                <button class="btn btn-secondary btn-action edit-pelanggan" data-id="C001">✍️ Edit</button> 
-                                <button class="btn btn-secondary btn-action">👁️ Detail Histori</button>
-                                <button class="btn btn-secondary btn-action delete-pelanggan" style="background-color: #FEE2E2; color: #EF4444;" data-id="C001" data-nama="Budi Santoso">🗑️ Hapus</button>
-                            </td> 
-                        </tr>
-                        <tr data-id="C002" data-nama="Siti Aisyah" data-email="siti@mail.com" data-telepon="08123456789"> 
-                            <td>C002</td> 
-                            <td>Siti Aisyah</td> 
-                            <td>08123456789</td>
-                            <td>Rp 500.000</td> 
-                            <td>
-                                <button class="btn btn-secondary btn-action edit-pelanggan" data-id="C002">✍️ Edit</button> 
-                                <button class="btn btn-secondary btn-action">👁️ Detail Histori</button>
-                                <button class="btn btn-secondary btn-action delete-pelanggan" style="background-color: #FEE2E2; color: #EF4444;" data-id="C002" data-nama="Siti Aisyah">🗑️ Hapus</button>
-                            </td> 
-                        </tr>
-                        <tr data-id="C003" data-nama="Joko Wibowo" data-email="joko.w@yahoo.com" data-telepon="08987654321"> 
-                            <td>C003</td> 
-                            <td>Joko Wibowo</td> 
-                            <td>joko.w@yahoo.com</td>
-                            <td>Rp 80.000</td> 
-                            <td>
-                                <button class="btn btn-secondary btn-action edit-pelanggan" data-id="C003">✍️ Edit</button> 
-                                <button class="btn btn-secondary btn-action">👁️ Detail Histori</button>
-                                <button class="btn btn-secondary btn-action delete-pelanggan" style="background-color: #FEE2E2; color: #EF4444;" data-id="C003" data-nama="Joko Wibowo">🗑️ Hapus</button>
-                            </td> 
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <section class="dashboard-content content-section" id="laporan">
-            <h2>Laporan Servis</h2>
-            <div class="report-section" style="min-height: 250px;">
-                <p style="font-style: italic; color: #6B7280;">Halaman ini untuk menghasilkan laporan periodik (harian, bulanan, tahunan) mengenai total servis yang diselesaikan, servis berdasarkan jenis layanan, dan performa teknisi.</p>
-            </div>
-        </section>
-
-        <section class="dashboard-content content-section" id="keuangan">
-            <h2>Transaksi & Keuangan</h2>
-            <div class="report-section" style="min-height: 250px;">
-                <p style="font-style: italic; color: #6B7280;">Halaman ini akan berfokus pada pencatatan dan rekapitulasi transaksi (pemasukan dan pengeluaran) serta ringkasan profit bulanan/tahunan.</p>
-            </div>
-        </section>
-
+            </main>
+        </div>
     </div>
 
-    <div id="layananModal" class="modal">
+    <div id="detailAntrianModal" class="modal-overlay">
         <div class="modal-content">
-            <span class="close-btn" data-modal-id="layananModal">&times;</span>
-            <h3 id="layananModalTitle">Tambah Layanan Baru</h3>
-            <form id="formLayanan">
-                <input type="hidden" id="layananId"> <div class="form-group-modal">
-                    <label for="layananNama">Nama Layanan</label>
-                    <input type="text" id="layananNama" required placeholder="Contoh: Bubut Poros, Frais Permukaan">
+            <header class="modal-header">
+                <h3 class="text-xl font-semibold" id="detailAntrianTitle">Detail Antrian</h3>
+                <button onclick="closeModal('detailAntrianModal')" class="btn-icon">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </header>
+            <div class="modal-body">
+                <div style="display:grid; grid-template-columns: 1fr 2fr; gap:12px; margin-bottom: 16px;">
+                    <div class="font-semibold text-gray-600">Nama Pelanggan</div> <div id="detailNama"></div>
+                    <div class="font-semibold text-gray-600">Layanan</div> <div id="detailLayanan"></div>
+                    <div class="font-semibold text-gray-600">Telepon</div> <div id="detailTelepon"></div>
+                    <div class="font-semibold text-gray-600">Alamat</div> <div id="detailAlamat"></div>
                 </div>
-                <div class="form-group-modal">
-                    <label for="layananHarga">Harga Dasar (Rp)</label>
-                    <input type="number" id="layananHarga" required placeholder="Cth: 150000" min="0">
+                <h4 class="font-semibold mt-4 mb-2 border-t pt-4">Keluhan/Catatan</h4>
+                <div id="detailKeluhan" class="p-3 bg-gray-50 border rounded-md whitespace-pre-wrap"></div>
+                
+                <div class="mt-6 flex justify-end">
+                    <button class="btn-secondary" onclick="closeModal('detailAntrianModal')">Tutup</button>
                 </div>
-                <div class="form-group-modal">
-                    <label for="layananWaktu">Waktu Pengerjaan (Jam)</label>
-                    <input type="number" id="layananWaktu" required placeholder="Cth: 3" min="1">
+            </div>
+        </div>
+    </div>
+
+    <div id="pelangganModal" class="modal-overlay">
+        <div class="modal-content">
+            <header class="modal-header">
+                <h3 class="text-xl font-semibold" id="pelangganModalTitle">Tambah Pelanggan Baru</h3>
+                <button onclick="closeModal('pelangganModal')" class="btn-icon">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </header>
+            <form id="pelangganForm" action="#" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" id="pelangganId" name="id">
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label for="pelangganNama" style="display:block; margin-bottom: 4px; font-weight: 500;">Nama</label>
+                        <input type="text" id="pelangganNama" name="nama" required 
+                               style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 6px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label for="pelangganEmail" style="display:block; margin-bottom: 4px; font-weight: 500;">Email</label>
+                        <input type="email" id="pelangganEmail" name="email" 
+                               style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 6px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 16px;">
+                        <label for="pelangganTelepon" style="display:block; margin-bottom: 4px; font-weight: 500;">Telepon</label>
+                        <input type="tel" id="pelangganTelepon" name="telepon" required
+                               style="width: 100%; padding: 8px; border: 1px solid #D1D5DB; border-radius: 6px;">
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Simpan Layanan</button>
+                
+                <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid #E5E7EB; display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('pelangganModal')">Batal</button>
+                    <button type="submit" class="btn-primary">Simpan Data</button>
+                </div>
             </form>
         </div>
     </div>
-    
-    <div id="pelangganModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" data-modal-id="pelangganModal">&times;</span>
-            <h3 id="pelangganModalTitle">Tambah Data Pelanggan Baru</h3>
-            <form id="formPelanggan">
-                <input type="hidden" id="pelangganId"> <div class="form-group-modal">
-                    <label for="pelangganNama">Nama Lengkap</label>
-                    <input type="text" id="pelangganNama" required placeholder="Nama Lengkap Pelanggan">
-                </div>
-                <div class="form-group-modal">
-                    <label for="pelangganEmail">Email</label>
-                    <input type="email" id="pelangganEmail" placeholder="email@contoh.com">
-                </div>
-                <div class="form-group-modal">
-                    <label for="pelangganTelepon">Nomor Telepon</label>
-                    <input type="text" id="pelangganTelepon" required placeholder="Cth: 08123456789">
-                </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Simpan Pelanggan</button>
-            </form>
-        </div>
-    </div>
+
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const menuItems = document.querySelectorAll('.menu-item');
-            const contentSections = document.querySelectorAll('.content-section');
-            const pageTitle = document.getElementById('pageTitle');
-            
-            // Logika Navigasi (TIDAK BERUBAH)
-            function showContent(targetId, title) {
-                contentSections.forEach(section => {
-                    section.classList.remove('active');
-                });
-                menuItems.forEach(item => {
-                    item.classList.remove('active');
-                });
-
-                const activeSection = document.getElementById(targetId);
-                if (activeSection) {
-                    activeSection.classList.add('active');
-                }
-
-                const activeMenu = document.querySelector(`.menu-item[data-target="${targetId}"]`);
-                if (activeMenu) {
-                    activeMenu.classList.add('active');
-                }
-
-                pageTitle.textContent = title;
+        // --- FUNGSI MODAL UTAMA ---
+        function openModal(id, title = null) {
+            const modal = document.getElementById(id);
+            if (title) {
+                document.getElementById(id + 'Title').textContent = title;
             }
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden'; // cegah scroll body
+        }
 
-            menuItems.forEach(item => {
-                item.addEventListener('click', (event) => {
-                    const targetId = event.currentTarget.getAttribute('data-target');
-                    const title = event.currentTarget.textContent.trim();
-                    showContent(targetId, title);
-                });
-            });
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('active');
+            document.body.style.overflow = ''; // izinkan scroll body
+        }
 
-            // --- LOGIKA MODAL DAN CRUD BARU ---
-
-            // FUNGSI UMUM UNTUK MEMBUKA MODAL
-            window.openModal = function(modalId, title) {
-                const modal = document.getElementById(modalId);
-                const titleElement = document.getElementById(modalId + 'Title');
-                
-                if (titleElement) {
-                    titleElement.textContent = title;
-                }
-                
-                // Reset form saat membuka modal baru (tambah data)
-                if (title.includes('Tambah')) {
-                    const formId = modalId === 'layananModal' ? 'formLayanan' : 'formPelanggan';
-                    document.getElementById(formId).reset();
-                    document.getElementById(formId.replace('form', '').toLowerCase() + 'Id').value = ''; // Kosongkan ID hidden
-                }
-                
-                modal.style.display = "block";
-            }
-
-            // TUTUP MODAL
-            document.querySelectorAll('.close-btn').forEach(span => {
-                span.onclick = function() {
-                    const modalId = this.getAttribute('data-modal-id');
-                    document.getElementById(modalId).style.display = "none";
+        // Event listener untuk menutup modal saat klik di luar area konten
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    closeModal(overlay.id);
                 }
             });
+        });
 
-            // TUTUP MODAL JIKA KLIK DI LUAR
-            window.onclick = function(event) {
-                if (event.target.classList.contains('modal')) {
-                    event.target.style.display = "none";
-                }
-            }
+        document.addEventListener('DOMContentLoaded', function() {
             
-            // --- CRUD MANAJEMEN LAYANAN ---
-
-            // FUNGSI (C/U) - SIMULASI FORM SUBMIT LAYANAN
-            document.getElementById('formLayanan').addEventListener('submit', function(event) {
-                event.preventDefault();
-
-                const id = document.getElementById('layananId').value;
-                const nama = document.getElementById('layananNama').value;
-                const harga = document.getElementById('layananHarga').value;
-                const waktu = document.getElementById('layananWaktu').value;
-                const action = id ? 'diperbarui' : 'ditambahkan';
-
-                alert(`Layanan "${nama}" berhasil ${action} (Simulasi CRUD).`);
-                document.getElementById('layananModal').style.display = "none";
-                
-                // Dalam aplikasi nyata, di sini Anda akan me-reload tabel dari database.
-                // Karena ini simulasi, kita hanya menampilkan notifikasi.
-                console.log(`Layanan Data: ID=${id}, Nama=${nama}, Harga=${harga}, Waktu=${waktu}`);
-            });
-            
-            // FUNGSI (U) - SIMULASI EDIT LAYANAN
-            document.querySelectorAll('.edit-layanan').forEach(button => {
+            // FUNGSI BARU (R) - LIHAT DETAIL ANTRIAN
+            document.querySelectorAll('.view-detail-antrian').forEach(button => {
                 button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    const row = document.querySelector(`tr[data-id="${id}"]`);
+                    const nama    = this.getAttribute('data-nama');
+                    const layanan = this.getAttribute('data-layanan');
+                    const telepon = this.getAttribute('data-telepon');
+                    const alamat  = this.getAttribute('data-alamat');
+                    const keluhan = this.getAttribute('data-keluhan');
+
+                    // Isi modal detail
+                    document.getElementById('detailNama').textContent    = nama;
+                    document.getElementById('detailLayanan').textContent = layanan;
+                    document.getElementById('detailTelepon').textContent = telepon;
+                    document.getElementById('detailAlamat').textContent  = alamat || 'Tidak ada';
+                    document.getElementById('detailKeluhan').textContent = keluhan || 'Tidak ada keluhan/catatan.';
                     
-                    if (row) {
-                        const nama = row.getAttribute('data-nama');
-                        const harga = row.getAttribute('data-harga');
-                        const waktu = row.getAttribute('data-waktu');
-
-                        // Isi form modal dengan data yang ada
-                        document.getElementById('layananId').value = id;
-                        document.getElementById('layananNama').value = nama;
-                        document.getElementById('layananHarga').value = harga;
-                        document.getElementById('layananWaktu').value = waktu;
-
-                        openModal('layananModal', `Edit Layanan: ${nama}`);
-                    }
+                    openModal('detailAntrianModal', `Detail Antrian: ${nama}`);
                 });
             });
 
-            // FUNGSI (D) - SIMULASI DELETE LAYANAN
-            document.querySelectorAll('.delete-layanan').forEach(button => {
+            // FUNGSI BARU (U) - SIMULASI PROSES ANTRIAN
+            document.querySelectorAll('.process-antrian').forEach(button => {
                 button.addEventListener('click', function() {
                     const id = this.getAttribute('data-id');
                     const nama = this.getAttribute('data-nama');
-                    if (confirm(`Apakah Anda yakin ingin menghapus layanan "${nama}" (${id})?`)) {
-                        alert(`Layanan "${nama}" berhasil dihapus (Simulasi CRUD).`);
-                        // Dalam aplikasi nyata: Hapus baris dari DOM atau reload tabel.
-                        // document.querySelector(`tr[data-id="${id}"]`).remove();
+                    if (confirm(`Apakah Anda yakin ingin mengubah status antrian ${nama} (${id}) menjadi 'Diproses'?`)) {
+                        alert(`Status antrian ${nama} berhasil diubah ke 'Diproses' (Simulasi CRUD). Silakan refresh halaman.`);
+                        // Dalam aplikasi nyata: Lakukan AJAX call ke file PHP untuk UPDATE status di database.
+                        // window.location.reload(); 
                     }
                 });
             });
 
 
-            // --- CRUD MANAJEMEN PELANGGAN ---
+            // --- FUNGSI LAMA (SIMULASI CRUD PELANGGAN) ---
 
-            // FUNGSI (C/U) - SIMULASI FORM SUBMIT PELANGGAN
-            document.getElementById('formPelanggan').addEventListener('submit', function(event) {
-                event.preventDefault();
-
+            // FUNGSI (C/U) - SIMULASI FORM SUBMIT
+            document.getElementById('pelangganForm').addEventListener('submit', function(e) {
+                e.preventDefault();
                 const id = document.getElementById('pelangganId').value;
                 const nama = document.getElementById('pelangganNama').value;
-                const telepon = document.getElementById('pelangganTelepon').value;
-                const action = id ? 'diperbarui' : 'ditambahkan';
-
-                alert(`Data pelanggan "${nama}" berhasil ${action} (Simulasi CRUD).`);
-                document.getElementById('pelangganModal').style.display = "none";
                 
-                console.log(`Pelanggan Data: ID=${id}, Nama=${nama}, Telepon=${telepon}`);
+                if (id) {
+                    // Update
+                    alert(`Data pelanggan ${nama} (ID: ${id}) berhasil diupdate (Simulasi CRUD).`);
+                } else {
+                    // Create
+                    alert(`Data pelanggan baru ${nama} berhasil ditambahkan (Simulasi CRUD).`);
+                }
+                closeModal('pelangganModal');
+                // Dalam aplikasi nyata: Lakukan AJAX call untuk INSERT/UPDATE data.
+                // window.location.reload(); 
             });
-            
-            // FUNGSI (U) - SIMULASI EDIT PELANGGAN
+
+            // FUNGSI (R) - SIMULASI EDIT PELANGGAN
             document.querySelectorAll('.edit-pelanggan').forEach(button => {
                 button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-id');
-                    const row = document.querySelector(`tr[data-id="${id}"]`);
-                    
+                    const row = this.closest('tr');
                     if (row) {
+                        const id = row.getAttribute('data-id');
                         const nama = row.getAttribute('data-nama');
                         const email = row.getAttribute('data-email');
                         const telepon = row.getAttribute('data-telepon');
