@@ -8,7 +8,8 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-include "koneksi.php"; // must set $conn as mysqli connection
+include __DIR__ . '/../koneksi.php';
+ // must set $conn as mysqli connection
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

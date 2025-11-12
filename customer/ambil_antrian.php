@@ -1,73 +1,108 @@
-<?php include('koneksi.php'); ?>
+<?php
+include __DIR__ . '/../koneksi.php';
+
+// Ambil semua layanan untuk dropdown
+$services = [];
+$result = $conn->query("SELECT * FROM menu ORDER BY name ASC");
+if ($result && $result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $services[] = $row;
+    }
+}
+
+// Jika pelanggan datang dari halaman layanan
+$selected_id = isset($_GET['id_menu']) ? $_GET['id_menu'] : '';
+$selected_service = null;
+if ($selected_id != '') {
+    foreach ($services as $srv) {
+        if ($srv['id_menu'] == $selected_id) {
+            $selected_service = $srv;
+            break;
+        }
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Ambil Antrian - E-SPEED</title>
-  <link rel="stylesheet" href="../04b7ea54-f81a-47ac-9f3d-aa880d597ad9.css">
+  <title>Form Ambil Antrian</title>
   <style>
-    body { font-family: 'Poppins', sans-serif; background: #f5f5f5; padding: 20px; }
-    .container { max-width: 600px; background: #fff; padding: 20px; margin: auto; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-    h2 { text-align: center; margin-bottom: 20px; }
-    label { display: block; margin-top: 12px; font-weight: 600; }
-    input, textarea, select {
-      width: 100%; padding: 10px; margin-top: 6px;
-      border-radius: 8px; border: 1px solid #ccc; outline: none;
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f7f7f7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    form {
+      background: white;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      width: 400px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
     }
     button {
-      margin-top: 20px; width: 100%;
-      background: #00ffc6; color: #000;
-      padding: 12px; border: none; border-radius: 8px; font-weight: 700;
-      transition: 0.2s;
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
     }
-    button:hover { background: #00b88a; color: #fff; }
-    .wa {
-      display: block; text-align: center; margin-top: 15px; color: #007b00;
-      text-decoration: none; font-weight: 600;
+    button:hover {
+      background: #0056b3;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2>Form Ambil Antrian</h2>
-    <form action="simpan_antrian.php" method="POST">
-      <label>Nama Anda</label>
-      <input type="text" name="nama" required>
 
-      <label>No. Telepon</label>
-      <input type="text" name="telepon" required>
+<form action="simpan_antrian.php" method="POST">
+  <h2>Form Ambil Antrian</h2>
 
-      <label>Alamat</label>
-      <textarea name="alamat" rows="2" required></textarea>
+  <label>Nama Anda</label>
+  <input type="text" name="nama" required>
 
-      <label>Layanan</label>
+  <label>No. Telepon</label>
+  <input type="text" name="telepon" required>
+
+  <label>Alamat</label>
+  <textarea name="alamat" required></textarea>
+
+  <label>Layanan</label>
+  <?php if ($selected_service): ?>
+      <input type="hidden" name="id_menu" value="<?= $selected_service['id_menu'] ?>">
+      <input type="text" value="<?= htmlspecialchars($selected_service['name']) ?>" disabled>
+  <?php else: ?>
       <select name="id_menu" required>
         <option value="">-- Pilih Layanan --</option>
-        <?php
-          $layanan = $conn->query("SELECT id_menu, name FROM menu");
-          while ($l = $layanan->fetch_assoc()) {
-            echo "<option value='{$l['id_menu']}'>{$l['name']}</option>";
-          }
-        ?>
-        <option value="lainnya">Lainnya</option>
+        <?php foreach ($services as $srv): ?>
+          <option value="<?= $srv['id_menu'] ?>"><?= htmlspecialchars($srv['name']) ?></option>
+        <?php endforeach; ?>
       </select>
-
-      <label>Keluhan / Detail</label>
-      <textarea name="keluhan" rows="2" placeholder="Jelaskan masalah kendaraan Anda"></textarea>
-
-      <label>Prioritas</label>
-      <select name="priority" required>
-        <option value="Normal">Normal</option>
-        <option value="Urgent">Urgent</option>
-        <option value="Low">Low</option>
-      </select>
-
-      <button type="submit">Ambil Antrian</button>
-    </form>
-
-    <a class="wa" href="https://wa.me/628993322514?text=Halo%20Admin,%20saya%20ingin%20konsultasi%20tentang%20layanan%20lainnya." target="_blank">
-      💬 Konsultasi dengan Admin via WhatsApp
-    </a>
-  </div>
+  <?php endif; ?>
+    <label>Keluhan / Detail</label>
+<textarea name="keluhan" rows="3" placeholder="Tuliskan masalah atau permintaan khusus..."></textarea>
+<label>Prioritas</label>
+<select name="priority">
+  <option value="Normal" selected>Normal</option>
+    <option value="Urgent">Urgent</option>
+</select>
+  <button type="submit">Ambil Antrian</button>
+</form>
 </body>
 </html>

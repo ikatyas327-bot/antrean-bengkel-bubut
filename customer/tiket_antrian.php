@@ -1,129 +1,122 @@
 <?php
-include "koneksi.php";
+include __DIR__ . '/../koneksi.php'; // pastikan koneksi utama di root project
 
-if (!isset($_GET['antrian'])) {
-    header("Location: index.php");
-    exit;
+if (!isset($conn) || !$conn) {
+    die("❌ Koneksi database gagal: variabel \$conn tidak terdefinisi.");
 }
 
-$queue_number = $_GET['antrian'];
+$antrian = $_GET['antrian'] ?? null;
+if (!$antrian) {
+    die("ID antrian tidak ditemukan.");
+}
 
-$q = $conn->query("SELECT q.*, m.name AS nama_layanan, m.estimated_work_time 
-                   FROM queue q 
-                   JOIN menu m ON q.id_menu = m.id_menu
-                   WHERE q.queue_number = '$queue_number'");
+// ambil data antrian
+$query = "SELECT q.*, m.name AS layanan_nama 
+          FROM queue q 
+          LEFT JOIN menu m ON q.id_menu = m.id_menu
+          WHERE q.queue_number = '$antrian'";
+$result = $conn->query($query);
 
-$data = $q->fetch_assoc();
+if ($result && $result->num_rows > 0) {
+    $data = $result->fetch_assoc();
+} else {
+    die("Data antrian tidak ditemukan.");
+}
+
+// nomor telepon bengkel (ganti sesuai punyamu)
+$no_wa = "628993322514"; // format internasional (62 untuk Indonesia)
+$pesan = urlencode("Halo, saya *{$data['nama']}*.\nNomor antrean saya: *{$data['queue_number']}* untuk layanan *{$data['layanan_nama']}*.\nTerima kasih!");
+$link_wa = "https://wa.me/$no_wa?text=$pesan";
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tiket Antrian - <?= $data['queue_number']; ?></title>
-    <link rel="stylesheet" href="style.css">
-
+    <title>Tiket Antrian - <?= htmlspecialchars($data['queue_number']); ?></title>
     <style>
         body {
-            background: var(--bg-secondary);
+            font-family: 'Poppins', sans-serif;
+            background-color: #f2f4f7;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 30px;
+            height: 100vh;
         }
-
         .ticket {
-            background: #fff;
-            width: 420px;
-            padding: 25px;
-            border-radius: 14px;
+            background: white;
+            border-radius: 12px;
+            padding: 30px 40px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             text-align: center;
-            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.15);
-            border: 1px solid var(--metal-1);
+            width: 380px;
         }
-
         .ticket h1 {
-            font-size: 42px;
-            margin-bottom: 5px;
-            color: var(--primary-dark);
+            color: #007bff;
+            margin-bottom: 15px;
         }
-
-        .ticket h2 {
-            font-size: 22px;
-            margin-bottom: 5px;
-        }
-
         .ticket p {
-            font-size: 16px;
             margin: 6px 0;
+            color: #333;
         }
-
-        .ticket .label {
-            font-weight: 600;
-            color: var(--primary-dark);
+        .queue-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #00bfa6;
+            margin: 15px 0;
         }
-
-        .ticket .btn-group {
-            margin-top: 18px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
+        .actions {
+            margin-top: 25px;
         }
-
-        .btn-print, .btn-wa {
-            padding: 10px 16px;
+        button, a {
+            display: inline-block;
+            margin: 6px;
+            padding: 10px 20px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
+            text-decoration: none;
+            font-weight: bold;
             transition: 0.3s;
         }
-
         .btn-print {
-            background: var(--primary-dark);
+            background-color: #007bff;
             color: white;
         }
-
         .btn-print:hover {
-            background: var(--primary-light);
+            background-color: #0056b3;
         }
-
         .btn-wa {
-            background: #25D366;
+            background-color: #25D366;
             color: white;
         }
-
         .btn-wa:hover {
-            background: #1cae54;
+            background-color: #1da955;
+        }
+        @media print {
+            .actions { display: none; }
+            body { background: white; }
+            .ticket {
+                box-shadow: none;
+                border: 1px solid #ccc;
+            }
         }
     </style>
 </head>
-
 <body>
+    <div class="ticket">
+        <h1>E-SPEED Bengkel</h1>
+        <p><strong>Nomor Antrian:</strong></p>
+        <div class="queue-number"><?= htmlspecialchars($data['queue_number']); ?></div>
+        <p><strong>Nama:</strong> <?= htmlspecialchars($data['nama']); ?></p>
+        <p><strong>Layanan:</strong> <?= htmlspecialchars($data['layanan_nama']); ?></p>
+        <p><strong>Tanggal:</strong> <?= htmlspecialchars($data['tanggal']); ?></p>
+        <p><strong>Status:</strong> <?= htmlspecialchars($data['status']); ?></p>
 
-<div class="ticket">
-    <h1><?= $data['queue_number']; ?></h1>
-    <h2><?= $data['nama_layanan']; ?></h2>
-
-    <p><span class="label">Nama:</span> <?= $data['nama']; ?></p>
-    <p><span class="label">Telepon:</span> <?= $data['telepon']; ?></p>
-    <p><span class="label">Prioritas:</span> <?= $data['priority']; ?></p>
-    <p><span class="label">Status:</span> <?= $data['status']; ?></p>
-    <p><span class="label">Tanggal:</span> <?= $data['tanggal']; ?></p>
-
-    <div class="btn-group">
-        <button class="btn-print" onclick="window.print()">Print</button>
-
-        <?php
-        $pesanWA = urlencode("Halo, saya ingin menanyakan antrian saya:\n\nNomor: {$data['queue_number']}\nLayanan: {$data['nama_layanan']}\nNama: {$data['nama']}\nPrioritas: {$data['priority']}\n\nTerima kasih!");
-        ?>
-        <a href="https://wa.me/?text=<?= $pesanWA; ?>" target="_blank">
-            <button class="btn-wa">Kirim WA</button>
-        </a>
+        <div class="actions">
+            <button class="btn-print" onclick="window.print()">🖨️ Cetak Tiket</button>
+            <a href="<?= $link_wa ?>" class="btn-wa" target="_blank">💬 Kirim ke WhatsApp</a>
+        </div>
     </div>
-</div>
-
 </body>
 </html>

@@ -1,31 +1,15 @@
 <?php
-$path = realpath(__DIR__ . '/../koneksi.php');
-if (!file_exists($path)) {
-    die("File koneksi.php tidak ditemukan di: " . $path);
+include '../koneksi.php'; // pastikan ini menunjuk ke koneksi.php utama
+
+if (!isset($conn) || !$conn) {
+    die("❌ Koneksi database gagal: variabel \$conn tidak terdefinisi.");
 }
-include 'koneksi.php';
-if (!isset($conn)) {
-    die("Koneksi database gagal. Pastikan koneksi.php menggunakan variabel \$conn");
-}
-
-$query = "SELECT * FROM menu";
-$result = $conn->query($query);
-?>
-
-include '../koneksi.php'; // pastikan file koneksi sesuai path kamu
-
-// pastikan koneksi bener-bener aktif
-if (!$conn || $conn->connect_error) {
+if ($conn->connect_error) {
     die("Koneksi ke database gagal: " . $conn->connect_error);
 }
 
-// ambil data layanan dari database
-$query = "SELECT * FROM menu";
-$result = $conn->query($query);
-?>
-
-// ambil data layanan dari database
-$query = "SELECT * FROM menu";
+// Ambil data layanan
+$query  = "SELECT * FROM menu ORDER BY name ASC";
 $result = $conn->query($query);
 ?>
 
@@ -35,22 +19,46 @@ $result = $conn->query($query);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>E-SPEED Bengkel</title>
-  <link rel="stylesheet" href="../04b7ea54-f81a-47ac-9f3d-aa880d597ad9.css">
-</head>
-<body>
-  <!-- NAVBAR -->
-  <nav>
-    <img src="../image/umkmlogo.png" alt="Logo E-SPEED Bengkel" style="height:50px;">
-    <ul>
-      <li><a href="#home">Beranda</a></li>
-      <li><a href="#layanan">Layanan Unggulan</a></li>
-      <li><a href="#tentang">Tentang Kami</a></li>
-      <li><a href="form_ambil_antrian.php">Pesan Antrean</a></li>
-    </ul>
-  </nav>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background-color: #f7f7f7;
+    }
 
-  <!-- HERO SECTION -->
-  <section id="home" style="
+    /* NAVBAR */
+    nav {
+      background-color: #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 50px;
+    }
+
+    nav img {
+      height: 50px;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 25px;
+      margin: 0;
+    }
+
+    nav ul li a {
+      text-decoration: none;
+      color: white;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    nav ul li a:hover {
+      color: #00ffc6;
+    }
+
+    /* HERO */
+    #home {
       background: url('../image/baground umkm.jpg') no-repeat center center/cover;
       height: 100vh;
       color: white;
@@ -58,46 +66,155 @@ $result = $conn->query($query);
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      text-align: center;">
-    <h1 style="font-size: 3rem;">Selamat Datang di <span style="color:#00ffc6;">E-SPEED</span></h1>
-    <p>Spesialis Perbaikan Mesin dan Kelistrikan Motor/Mobil Anda. Cepat, Tepat, dan Bergaransi!</p>
-    <a href="form_ambil_antrian.php" style="
-      background-color:#00ffc6;
-      color:black;
-      padding:12px 28px;
-      border-radius:8px;
-      font-weight:bold;
-      text-decoration:none;
-      margin-top:20px;
-      transition:0.3s;">
-      Pesan Antrean Sekarang
-    </a>
+      text-align: center;
+    }
+
+    #home h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.4);
+    }
+
+    #home span {
+      color: #00ffc6;
+    }
+
+    #home a {
+      background-color: #00ffc6;
+      color: black;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-weight: bold;
+      text-decoration: none;
+      margin-top: 20px;
+      transition: 0.3s;
+    }
+
+    #home a:hover {
+      background-color: #00cca3;
+    }
+
+    /* LAYANAN */
+    #layanan {
+      padding: 80px 0;
+      text-align: center;
+      background-color: #f8f8f8;
+    }
+
+    #layanan h2 {
+      font-size: 2rem;
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .layanan-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 25px;
+    }
+
+    .layanan-item {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      width: 260px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      transition: 0.3s;
+    }
+
+    .layanan-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .layanan-item h3 {
+      color: #00bfa6;
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+    }
+
+    .layanan-item p {
+      margin: 5px 0;
+      color: #444;
+    }
+
+    /* FOOTER / TENTANG KAMI */
+    #tentang {
+      background-color: #1a1a1a;
+      color: white;
+      text-align: center;
+      padding: 80px 20px;
+    }
+
+    #tentang h2 {
+      color: #00ffc6;
+    }
+
+    #tentang p {
+      max-width: 700px;
+      margin: 20px auto;
+      line-height: 1.6;
+    }
+
+    footer {
+      background-color: #111;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <img src="../image/umkmlogo.png" alt="Logo Bengkel">
+    <ul>
+      <li><a href="#home">Beranda</a></li>
+      <li><a href="#layanan">Layanan</a></li>
+      <li><a href="#tentang">Tentang Kami</a></li>
+      <li><a href="ambil_antrian.php">Ambil Antrean</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section id="home">
+    <h1>Selamat Datang di <span>E-SPEED</span></h1>
+    <p>Spesialis Perbaikan Mesin dan Kelistrikan Motor/Mobil Anda.<br>Cepat, Tepat, dan Bergaransi!</p>
+    <a href="ambil_antrian.php">Pesan Antrean Sekarang</a>
   </section>
 
   <!-- LAYANAN -->
-  <section id="layanan" style="padding:80px 0;text-align:center;background-color:#f4f4f4;">
-    <h2 style="margin-bottom:40px;">Layanan Unggulan Kami</h2>
-    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:24px;">
-      <?php while ($row = $result->fetch_assoc()): ?>
-        <div style="background:white;border-radius:10px;padding:20px;width:260px;box-shadow:0 4px 8px rgba(0,0,0,0.1);">
-          <h3><?= htmlspecialchars($row['name']) ?></h3>
-          <p>Harga: Rp<?= number_format($row['price'], 0, ',', '.') ?></p>
-          <p>Estimasi: <?= htmlspecialchars($row['estimated_work_time']) ?> jam</p>
-        </div>
-      <?php endwhile; ?>
+  <section id="layanan">
+    <h2>Layanan Unggulan Kami</h2>
+    <div class="layanan-container">
+      <?php if ($result && $result->num_rows > 0): ?>
+        <?php while ($row = $result->fetch_assoc()): ?>
+          <div class="layanan-item">
+            <h3><?= htmlspecialchars($row['name']) ?></h3>
+            <p>Harga: Rp<?= number_format($row['price'], 0, ',', '.') ?></p>
+            <p>Estimasi: <?= htmlspecialchars($row['estimated_work_time']) ?> jam</p>
+          </div>
+        <?php endwhile; ?>
+      <?php else: ?>
+        <p>Tidak ada layanan tersedia.</p>
+      <?php endif; ?>
     </div>
   </section>
 
   <!-- TENTANG KAMI -->
-  <section id="tentang" style="padding:80px;text-align:center;background-color:#222;color:white;">
+  <section id="tentang">
     <h2>Tentang Kami</h2>
-    <p style="max-width:700px;margin:20px auto;">
-      E-SPEED Bengkel adalah bengkel modern yang berfokus pada pelayanan cepat, profesional,
+    <p>E-SPEED Bengkel adalah bengkel modern yang berfokus pada pelayanan cepat, profesional,
       dan terintegrasi digital. Kami hadir untuk mempermudah pelanggan dalam melakukan
-      perawatan dan perbaikan kendaraan dengan sistem antrean online yang praktis.
-    </p>
+      perawatan dan perbaikan kendaraan dengan sistem antrean online yang praktis.</p>
   </section>
 
-  <script src="../c5c43e88-f6a3-4d8e-a890-45d5d446cbe1.js"></script>
+  <footer>
+    &copy; <?= date("Y") ?> E-SPEED Bengkel | All Rights Reserved.
+  </footer>
+
 </body>
 </html>
