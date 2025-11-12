@@ -1,11 +1,13 @@
 <?php
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "umkm_bengkel_bubut_new";
+$servername = "localhost";
+$username = "root";
+$password = "";
+$database = "umkm_bengkel_bubut_new"; // pastikan sesuai dengan nama database kamu
 
-$conn = new mysqli($host, $user, $pass, $db);
+// Membuat koneksi
+$conn = new mysqli($servername, $username, $password, $database);
 
+// Cek koneksi
 if ($conn->connect_error) {
     die("Koneksi gagal: " . $conn->connect_error);
 }

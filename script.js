@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 1. Logika Pemrosesan Form Antrian
     if (antrianForm) {
         antrianForm.addEventListener('submit', function(event) {
-            event.preventDefault(); // Mencegah form di-submit secara default
+             // Mencegah form di-submit secara default
 
             // --- SIMULASI PENGIRIMAN DATA ---
             
@@ -42,4 +42,40 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+});
+// --- Smooth Scroll for Navbar Links ---
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function (e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({
+        behavior: 'smooth'
+      });
+    }
+  });
+});
+
+// --- Navbar hover animation ---
+const navLinks = document.querySelectorAll('nav ul li a');
+navLinks.forEach(link => {
+  link.addEventListener('mouseenter', () => {
+    link.style.color = '#00ffc6';
+    link.style.transition = 'color 0.3s ease';
+  });
+  link.addEventListener('mouseleave', () => {
+    link.style.color = '';
+  });
+});
+
+// --- Navbar scroll effect ---
+window.addEventListener('scroll', () => {
+  const nav = document.querySelector('nav');
+  if (window.scrollY > 80) {
+    nav.style.background = 'rgba(0,0,0,0.85)';
+    nav.style.backdropFilter = 'blur(6px)';
+    nav.style.transition = '0.3s ease';
+  } else {
+    nav.style.background = 'transparent';
+  }
 });

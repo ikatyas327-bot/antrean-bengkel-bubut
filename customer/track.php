@@ -1,53 +1,89 @@
 <?php
-// customer/track.php
-header('Content-Type: application/json');
-$mysqli = require '../koneksi.php';
+include 'koneksi.php';
+?>
 
-$phone = trim($_GET['phone'] ?? '');
-if (!$phone) { echo json_encode(['found'=>false]); exit; }
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lacak Antrian</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background: #f2f4f8;
+            padding: 40px;
+            text-align: center;
+        }
+        .track-box {
+            background: #fff;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        input {
+            width: 80%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+        button {
+            background: #007bff;
+            color: #fff;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
 
-// ambil antrian terakhir customer hari ini (status apapun) berdasarkan telepon
-$stmt = $mysqli->prepare("SELECT q.id, q.queue_number, q.status, q.created_at, q.id_menu, m.name AS service_name
-                          FROM queue q LEFT JOIN menu m ON q.id_menu = m.id_menu
-                          WHERE q.telepon = ? AND DATE(q.created_at)=CURDATE()
-                          ORDER BY q.id DESC LIMIT 1");
-$stmt->bind_param("s", $phone);
-$stmt->execute();
-$res = $stmt->get_result();
-$row = $res->fetch_assoc();
-$stmt->close();
-if (!$row) { echo json_encode(['found'=>false]); exit; }
+    <div class="track-box">
+        <h2>Lacak Status Antrian</h2>
+        <form method="GET" action="">
+            <input type="text" name="queue_number" placeholder="Masukkan Nomor Antrian (misal: PBM-01)" required>
+            <button type="submit">Cari</button>
+        </form>
 
-// hitung posisi: count how many menunggu earlier than this record for same service
-$posStmt = $mysqli->prepare("SELECT COUNT(*) FROM queue WHERE id_menu = ? AND status='Menunggu' AND DATE(created_at)=CURDATE() AND created_at <= ?");
-$posStmt->bind_param("is", $row['id_menu'], $row['created_at']);
-$posStmt->execute();
-$posStmt->bind_result($pos);
-$posStmt->fetch();
-$posStmt->close();
+        <div class="result">
+            <?php
+            if (isset($_GET['queue_number'])) {
+                $queue_number = $_GET['queue_number'];
 
-// estimate ETA simple: position * average estimate_days for service
-$estStmt = $mysqli->prepare("SELECT COALESCE(estimate_days,0) FROM menu WHERE id_menu = ?");
-$estStmt->bind_param("i",$row['id_menu']);
-$estStmt->execute();
-$estStmt->bind_result($estimate_days);
-$estStmt->fetch();
-$estStmt->close();
+                $query = $conn->prepare("SELECT q.*, m.name AS menu_name
+                FROM queue q
+                JOIN menu m ON q.id_menu = m.id_menu
+                WHERE q.queue_number = ?"); 
+                $query->bind_param("s", $queue_number);
+                $query->execute();
+                $result = $query->get_result();
 
-$eta = null;
-if ($estimate_days && $pos > 0) {
-    // calculate ETA as created_at + (pos * estimate_days) days
-    $ts = strtotime($row['created_at']);
-    $sec = $pos * intval($estimate_days) * 24 * 3600;
-    $eta = date('d M Y H:i', $ts + $sec);
-}
+                if ($result->num_rows > 0) {
+                    $row = $result->fetch_assoc();
+                    echo "<h3>Detail Antrian:</h3>";
+                    echo "<p><strong>Nomor Antrian:</strong> {$row['queue_number']}</p>";
+                    echo "<p><strong>Nama:</strong> {$row['nama']}</p>";
+                    echo "<p><strong>Layanan:</strong> {$row['menu_name']}</p>";
+                    echo "<p><strong>Status:</strong> {$row['status']}</p>";
+                    echo "<p><strong>Tanggal:</strong> {$row['tanggal']}</p>";
+                } else {
+                    echo "<p style='color:red;'>Nomor antrian tidak ditemukan.</p>";
+                }
+            }
+            ?>
+        </div>
+    </div>
 
-echo json_encode([
-  'found'=>true,
-  'id'=>$row['id'],
-  'queue_number'=>$row['queue_number'],
-  'service_name'=>$row['service_name'],
-  'status'=>$row['status'],
-  'position'=>intval($pos),
-  'eta'=>$eta
-]);
+</body>
+</html>
