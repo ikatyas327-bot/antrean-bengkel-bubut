@@ -39,7 +39,6 @@ $result = $conn->query("SELECT * FROM customer ORDER BY customer_id DESC");
       <th>Nama</th>
       <th>No. Telepon</th>
       <th>Alamat</th>
-      <th>Kota</th>
       <th>Aksi</th>
     </tr>
     <?php if ($result->num_rows > 0): $no=1; while($row = $result->fetch_assoc()): ?>
@@ -48,7 +47,6 @@ $result = $conn->query("SELECT * FROM customer ORDER BY customer_id DESC");
       <td><?= htmlspecialchars($row['name']) ?></td>
       <td><?= htmlspecialchars($row['phone_number']) ?></td>
       <td><?= htmlspecialchars($row['address']) ?></td>
-      <td><?= htmlspecialchars($row['city']) ?></td>
       <td>
         <a href="edit_pelanggan.php?id=<?= $row['customer_id'] ?>" class="btn-edit">Edit</a>
         <a href="hapus_pelanggan.php?id=<?= $row['customer_id'] ?>" class="btn-hapus" onclick="return confirm('Yakin hapus pelanggan ini?')">Hapus</a>
